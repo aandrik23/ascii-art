@@ -10,55 +10,82 @@ import (
 
 // Capture output to compare with expected ASCII art
 func captureOutput(f func()) string {
-	// Create a pipe to capture standard output
 	r, w, _ := os.Pipe()
-
-	// Save the original stdout
 	old := os.Stdout
 	defer func() {
-		os.Stdout = old // Restore original stdout
+		os.Stdout = old
 	}()
-	os.Stdout = w // Redirect stdout to the pipe
+	os.Stdout = w
 
-	f() // Call the function that produces output
+	f()
 
-	// Close the write end and read from the read end
 	w.Close()
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r) // Read from the pipe into the buffer
+	buf.ReadFrom(r)
 
-	return buf.String() // Return the captured output as a string
+	return buf.String()
 }
 
-func TestPrintAsciiArt(t *testing.T) {
-	// Specify the banner file name
-	styleBanner := "standard" // Change this to your desired banner style
+// Test for character A
+func TestPrintAsciiArt_A(t *testing.T) {
+	testPrintAsciiArt(t, []string{"A"})
+}
+
+// Test for character B
+func TestPrintAsciiArt_B(t *testing.T) {
+	testPrintAsciiArt(t, []string{"B"})
+}
+
+// Test for character C
+func TestPrintAsciiArt_C(t *testing.T) {
+	testPrintAsciiArt(t, []string{"C"})
+}
+
+// Test for multiple characters
+func TestPrintAsciiArt_AB(t *testing.T) {
+	testPrintAsciiArt(t, []string{"Hello"})
+}
+
+// Helper function to test PrintAsciiArt with input and expected output
+func testPrintAsciiArt(t *testing.T, input []string) {
+	styleBanner := "standard"
 	bannerFileName := "../banners/" + styleBanner + ".txt"
 
-	// Read the banner file
 	fileContent, err := os.ReadFile(bannerFileName)
 	if err != nil {
 		t.Fatalf("Failed to read banner file: %v", err)
 	}
 
-	// Replace any Windows line endings with Unix style
 	fileContentString := strings.ReplaceAll(string(fileContent), "\r\n", "\n")
 	bannerLines := strings.Split(fileContentString, "\n")
 
-	// Define input for testing
-	input := []string{"A"} // Change this to the character you want to test
+	expectedOutput := generateExpectedOutput(bannerLines, input)
 
-	// Calculate expected output
-	expectedOutput := strings.Join(bannerLines[(int(input[0][0])-32)*9+1:(int(input[0][0])-32)*9+9], "\n") + "\n"
-
-	// Capture the output of the PrintAsciiArt function
 	actualOutput := captureOutput(func() {
 		funcs.PrintAsciiArt(input, bannerLines)
 	})
 
-	// Compare actual output with expected output
 	if actualOutput != expectedOutput {
-		t.Errorf("Expected:\n%s\nGot:\n%s", expectedOutput, actualOutput)
+		t.Errorf("For input %v, expected:\n%s\nGot:\n%s", input, expectedOutput, actualOutput)
 	}
+}
+
+// Helper function to generate expected output based on input
+func generateExpectedOutput(bannerLines []string, input []string) string {
+	var output strings.Builder
+
+	// Iterate over the height of the ASCII art (8 lines)
+	for h := 1; h < 9; h++ {
+		for _, word := range input {
+			for i := 0; i < len(word); i++ {
+				charIndex := int(word[i]) - 32
+				lineIndex := charIndex*9 + h
+				output.WriteString(bannerLines[lineIndex])
+			}
+		}
+		output.WriteString("\n") // Newline after each row of the characters
+	}
+
+	return output.String()
 }
